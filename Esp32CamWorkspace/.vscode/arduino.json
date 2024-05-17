@@ -1,0 +1,7 @@
+{
+    "sketch": "Esp32Cam\\Esp32Cam.ino",
+    "configuration": "CPUFreq=240,FlashMode=qio,PartitionScheme=huge_app,FlashFreq=80,DebugLevel=none,EraseFlash=none",
+    "board": "esp32:esp32:esp32cam",
+    "port": "COM3",
+    "programmer": "esptool"
+}
