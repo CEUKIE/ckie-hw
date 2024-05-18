@@ -24,13 +24,15 @@ String PW = "";
 
 
 //카메라
-#include "camera_pins.h"
+
 
 //테스트용으로 임시 온습도 설정
 String MAXHum = "40.0";
 String MINHum = "35.0";
 String MAXTem = "29.7";
 String MINTem = "20.8";
+String NOWHUM = "";
+String NOWTem = "";
 
 void setup() {
   Serial.begin(115200);     //시리얼 통신 속도 설정
@@ -49,12 +51,17 @@ void loop() {
 
   //소프트웨어 시리얼 통신 부분 (미완성)
   if  (Serial_soft.available()){
-    String text = Serial_soft.readStringUntil('\n');
+    String text = Serial_soft.readStringUntil(';');
     Serial.println(text);
+    int index = text.indexOf(' ');
+    NOWTem = text.substring(0, index);
+    NOWHUM = text.substring(index + 1);
+    Serial.println("nowtemp : " + NOWTem);
+    Serial.println("nowhum : " + NOWHUM);
+    Serial.println();
   }
 
-  Serial_soft.println("esp32 Serial communication");
-  delay(1500);
+  delay(1000);
 }
 
 //블루투스 연결 이벤트
