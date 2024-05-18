@@ -26,11 +26,11 @@ String PW = "";
 //카메라
 #include "camera_pins.h"
 
-
-String MAXHum = "";
-String MINHum = "";
-String MAXTem = "";
-String MINTem = "";
+//테스트용으로 임시 온습도 설정
+String MAXHum = "40.0";
+String MINHum = "35.0";
+String MAXTem = "29.7";
+String MINTem = "20.8";
 
 void setup() {
   Serial.begin(115200);     //시리얼 통신 속도 설정

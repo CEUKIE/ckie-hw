@@ -4,12 +4,12 @@
 #define RX 3
 #define TX 4
 
-SoftwareSerial soft(RX, TX);
+SoftwareSerial Serial_soft(RX, TX);
 
-float setMinTemp; //사육장 최저 온도
-float setMaxTemp; //사육장 최고 온도
-float setMinHum;  //사육장 최저 습도
-float sethum;     //사육장 최고 습도
+float MINTem; //사육장 최저 온도
+float MAXTem; //사육장 최고 온도
+float MINHum;  //사육장 최저 습도
+float MAXHum;     //사육장 최고 습도
 
 
 //온습도 센서
@@ -45,7 +45,7 @@ void setup() {
 
   pinMode(pinRelay, OUTPUT); //릴레이 모듈 핀모드 설정
 
-  soft.begin(9600);   // 소프트웨어 시리얼 통신 속도 설정
+  Serial_soft.begin(9600);   // 소프트웨어 시리얼 통신 속도 설정
 }
 
 void loop() {
@@ -79,11 +79,11 @@ void loop() {
 
 
   // 소프트웨어 시리얼 통신 (미완성)
-  soft.println("hello boss");
+  Serial_soft.println("hello boss");
   delay(1500);
 
-  if(soft.available()){
-    String text = soft.readStringUntil('\n');
+  if(Serial_soft.available()){
+    String text = Serial_soft.readStringUntil('\n');
     Serial.println(text);
   }
 }
