@@ -1,30 +1,29 @@
 //시리얼 통신
 #include <SoftwareSerial.h>
-
 #define RX 13
 #define TX 14
 
 SoftwareSerial Serial_soft(RX, TX);
 
-//legacy 블루투스 연결
+//블루투스
 #include <BluetoothSerial.h>
 
 BluetoothSerial Serial_BT;
 String bluetooth_data;
 
-// 보드 UID
+//보드 UID
 #include <ArduinoUniqueID.h>
 
 String UID = "";
 
-// wifi
+//WIFI
 #include <WiFi.h>
 
 String SSID = "";
 String PW = "";
 
 
-// 카메라
+//카메라
 #include "camera_pins.h"
 
 
@@ -34,15 +33,15 @@ String MAXTem = "";
 String MINTem = "";
 
 void setup() {
-  Serial.begin(115200);   //시리얼 통신 속도 설정
-  Serial_soft.begin(9600);   //소프트웨어 시리얼 통신 속도 설정
+  Serial.begin(115200);     //시리얼 통신 속도 설정
+  Serial_soft.begin(9600);  //소프트웨어 시리얼 통신 속도 설정
 
-  UID_setup();             //UID 저장
+  UID_setup();              //UID 저장
 
-  Serial_BT.register_callback(BT_status); //블루투스 연결 콜백
-  Serial_BT.begin("Ckie" + UID); //블루투스 셋업
+  Serial_BT.register_callback(BT_status); //블루투스 콜백 등록
+  Serial_BT.begin("Ckie" + UID);          //블루투스 이름 설정
 
-  WIFI_connect();
+  WIFI_connect();           //WIFI 연결
 
 }
 
@@ -56,8 +55,6 @@ void loop() {
 
   Serial_soft.println("esp32 Serial communication");
   delay(1500);
-
-
 }
 
 //블루투스 연결 이벤트
@@ -66,7 +63,7 @@ void BT_status (esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
   if (event == ESP_SPP_SRV_OPEN_EVT) {
     Serial.println ("Bluetooth Connected");
     Serial_BT.println(UID);
-    // 연결 될 경우 UID 전달
+    //블루투스가 연결 될 경우 UID 전달
   }
 
   else if (event == ESP_SPP_CLOSE_EVT ) {
@@ -101,6 +98,7 @@ void WIFI_connect() {
   Serial.println("wifi success!");
 }
 
+//UID 변수 저장 함수
 void UID_setup() {
   for (size_t i = 0; i < 8; i++)
 	{
