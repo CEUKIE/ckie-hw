@@ -10,6 +10,7 @@ SoftwareSerial Serial_soft(RX, TX);
 #include <BluetoothSerial.h>
 
 BluetoothSerial Serial_BT;
+String bluetooth_data;
 
 // 보드 UID
 #include <ArduinoUniqueID.h>
@@ -63,23 +64,41 @@ void loop() {
 void BT_status (esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
 
   if (event == ESP_SPP_SRV_OPEN_EVT) {
-    Serial.println ("Client Connected");
+    Serial.println ("Bluetooth Connected");
     Serial_BT.println(UID);
     // 연결 될 경우 UID 전달
   }
 
   else if (event == ESP_SPP_CLOSE_EVT ) {
-    Serial.println ("Client Disconnected");
+    Serial.println ("Bluetooth Disconnected");
   }
 }
 
+//wifi 연결 함수
 void WIFI_connect() {
-  //wifi 통신 부분 (미완성)>
-  while ((SSID == "") || (PW == ""))
+  Serial.println("[SETUP] WIFI SETUP START");
+
+  while ((SSID == "") || (PW == "") || (WiFi.status() != WL_CONNECTED))
   {
-    /* code */
+    bluetooth_data = Serial_BT.readStringUntil('\n');\
+
+    if (bluetooth_data[0] == 's')
+    {
+      int spacePos = bluetooth_data.indexOf(' ');
+      SSID = bluetooth_data.substring(spacePos + 1);
+      SSID.trim();
+    }
+    else if (bluetooth_data[0] == 'p')
+    {
+      int spacePos = bluetooth_data.indexOf(' ');
+      PW = bluetooth_data.substring(spacePos + 1);
+      PW.trim();
+    }
+
+    WiFi.begin(SSID, PW);
+    delay(1000);
   }
-  
+  Serial.println("wifi success!");
 }
 
 void UID_setup() {
