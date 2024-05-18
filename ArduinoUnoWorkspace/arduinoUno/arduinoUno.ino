@@ -65,17 +65,27 @@ void loop() {
   delay(1000);
 
 
-  //가습기 모듈 작동 (미완성)
-  digitalWrite(pinMICRO, HIGH);
-  delay(1000);
-  digitalWrite(pinMICRO, LOW);
+  //가습기 모듈 작동
+  if (NOWHum < MINHum.toFloat() && NOWHum < MAXHum.toFloat())
+  {
+    digitalWrite(pinMICRO, HIGH);
+  }
+  else
+  {
+    digitalWrite(pinMICRO, LOW);
+  }
+  
   delay(1000);
 
 
-  // 릴레이 작동 (미완성)
-  digitalWrite(pinRelay, HIGH);
-  delay(1000);
-  digitalWrite(pinRelay, LOW);
+  // 릴레이 작동
+  if (NOWTem < MINTem.toFloat() && NOWTem < MAXTem.toFloat())
+  {
+    digitalWrite(pinRelay, HIGH);
+  }
+  else{
+    digitalWrite(pinRelay, LOW);
+  }
   delay(1000);
 
 
