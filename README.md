@@ -1,2 +1,2 @@
 # ckie-hw
-> ckie hardware repo
+> 변온동물을 위한 스마트 사육장 프로제트 ckie의 하드웨어 레포지토리 입니다.

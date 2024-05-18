@@ -3,6 +3,8 @@
 
 ### VisualStudioCode ###
 .vscode/*
+Esp32CamWorkspace/.vscode/*
+ArduinoUnoWorkspace/.vscode/*
 
 
 # Local History for Visual Studio Code
