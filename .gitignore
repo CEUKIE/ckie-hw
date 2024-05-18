@@ -4,6 +4,7 @@
 ### VisualStudioCode ###
 .vscode/*
 
+
 # Local History for Visual Studio Code
 .history/
 
@@ -14,5 +15,8 @@
 # Ignore all local history of files
 .history
 .ionide
+
+# Ignore all json files
+*.json
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode
