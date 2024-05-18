@@ -24,17 +24,21 @@ String PW = "";
 
 
 //카메라
-#include "camera_pins.h"
 
 
-String MAXHum = "";
-String MINHum = "";
-String MAXTem = "";
-String MINTem = "";
+//테스트용 임시 온습도 설정
+String MAXHum = "40.0";
+String MINHum = "35.0";
+String MAXTem = "29.7";
+String MINTem = "20.8";
+String NOWHUM = "";
+String NOWTem = "";
 
 void setup() {
   Serial.begin(115200);     //시리얼 통신 속도 설정
   Serial_soft.begin(9600);  //소프트웨어 시리얼 통신 속도 설정
+
+
 
   UID_setup();              //UID 저장
 
@@ -43,31 +47,39 @@ void setup() {
 
   WIFI_connect();           //WIFI 연결
 
+  // send_MAXMINdata();        //최대 최소 온습도 전달
 }
 
 void loop() {
 
-  //소프트웨어 시리얼 통신 부분 (미완성)
+  //현재 온습도 송신
   if  (Serial_soft.available()){
-    String text = Serial_soft.readStringUntil('\n');
-    Serial.println(text);
+    String text = Serial_soft.readStringUntil(';');
+    Serial.println(text); //디버깅용
+    int index = text.indexOf(' ');
+    NOWTem = text.substring(0, index);
+    NOWHUM = text.substring(index + 1);
+    NOWTem.trim();
+    NOWHUM.trim();
+    //디버깅용
+    Serial.println("nowtemp : " + NOWTem);
+    Serial.println("nowhum : " + NOWHUM);
+    Serial.println();
   }
 
-  Serial_soft.println("esp32 Serial communication");
-  delay(1500);
+  delay(1000);
 }
 
 //블루투스 연결 이벤트
 void BT_status (esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
 
   if (event == ESP_SPP_SRV_OPEN_EVT) {
-    Serial.println ("Bluetooth Connected");
-    Serial_BT.println(UID);
-    //블루투스가 연결 될 경우 UID 전달
+    Serial.println ("Bluetooth Connected");     //디버깅용
+    Serial_BT.println(UID);    //블루투스가 연결 될 경우 UID 전달
   }
 
   else if (event == ESP_SPP_CLOSE_EVT ) {
-    Serial.println ("Bluetooth Disconnected");
+    Serial.println ("Bluetooth Disconnected");  //디버깅용
   }
 }
 
@@ -105,4 +117,10 @@ void UID_setup() {
 
     UID += String(UniqueID8[i], HEX);
 	}
+}
+
+//최고최저 온습도 송신
+void send_MAXMINdata() {
+  Serial_soft.print(MAXTem + " " + MINTem + " " + MAXHum + " " + MINHum + " " + MINHum + ";");
+  delay(1000);
 }
