@@ -26,6 +26,12 @@ String PW = "";
 //카메라
 
 
+//http
+#include <ArduinoJson.h>
+#include <HTTPClient.h>
+
+//websocket
+
 //테스트용 임시 온습도 설정
 String MAXHum = "40.0";
 String MINHum = "35.0";
@@ -47,12 +53,12 @@ void setup() {
 
   WIFI_connect();           //WIFI 연결
 
-  // send_MAXMINdata();        //최대 최소 온습도 전달
+  send_MAXMINdata();        //최대 최소 온습도 전달
 }
 
 void loop() {
 
-  //현재 온습도 송신
+  //현재 온습도 수신
   if  (Serial_soft.available()){
     String text = Serial_soft.readStringUntil(';');
     Serial.println(text); //디버깅용
@@ -65,9 +71,30 @@ void loop() {
     Serial.println("nowtemp : " + NOWTem);
     Serial.println("nowhum : " + NOWHUM);
     Serial.println();
-  }
+    //현재 온습도 http 전송
+    // Prepare JSON document
+    DynamicJsonDocument doc(2048);
+    doc["temperature"] = NOWTem.toFloat();
+    doc["humidity"] = NOWHUM.toFloat();
 
-  delay(1000);
+    // Serialize JSON document
+    String json;
+    serializeJson(doc, json);
+
+    WiFiClient client;  // or WiFiClientSecure for HTTPS
+    HTTPClient http;
+
+    // Send request
+    http.begin(client, "http://httpbin.org/post");
+    http.POST(json);
+
+    // Read response
+    Serial.print(http.getString());
+
+    // Disconnect
+    http.end();  }
+
+  delay(30000);
 }
 
 //블루투스 연결 이벤트
