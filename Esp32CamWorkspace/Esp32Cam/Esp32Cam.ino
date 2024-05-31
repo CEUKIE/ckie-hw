@@ -24,6 +24,7 @@ String PW = "";
 
 
 //카메라
+#include ""
 
 
 //http
@@ -57,7 +58,6 @@ void setup() {
 }
 
 void loop() {
-
   //현재 온습도 수신
   if  (Serial_soft.available()){
     String text = Serial_soft.readStringUntil(';');
@@ -71,6 +71,7 @@ void loop() {
     Serial.println("nowtemp : " + NOWTem);
     Serial.println("nowhum : " + NOWHUM);
     Serial.println();
+
     //현재 온습도 http 전송
     // Prepare JSON document
     DynamicJsonDocument doc(2048);
@@ -92,7 +93,9 @@ void loop() {
     Serial.print(http.getString());
 
     // Disconnect
-    http.end();  }
+    http.end();  
+    }
+
 
   delay(30000);
 }
