@@ -19,8 +19,8 @@ String UID = "";
 //WIFI
 #include <WiFi.h>
 
-String SSID = "dlink1234";
-String PW = "14159265";
+String SSID = "";
+String PW = "";
 
 
 //카메라
