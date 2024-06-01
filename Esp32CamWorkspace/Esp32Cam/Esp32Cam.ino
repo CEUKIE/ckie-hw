@@ -19,12 +19,14 @@ String UID = "";
 //WIFI
 #include <WiFi.h>
 
-String SSID = "";
-String PW = "";
+String SSID = "dlink1234";
+String PW = "14159265";
 
 
 //카메라
-#include ""
+#include "camera_pins.h"
+#include "soc/soc.h" //disable brownour problems
+#include "soc/rtc_cntl_reg.h"  //disable brownour problems
 
 
 //http
@@ -54,11 +56,12 @@ void setup() {
 
   WIFI_connect();           //WIFI 연결
 
-  send_MAXMINdata();        //최대 최소 온습도 전달
+  // send_MAXMINdata();        //최대 최소 온습도 전달
 }
 
 void loop() {
-  //현재 온습도 수신
+
+  //현재 온습도 송신
   if  (Serial_soft.available()){
     String text = Serial_soft.readStringUntil(';');
     Serial.println(text); //디버깅용
@@ -94,10 +97,9 @@ void loop() {
 
     // Disconnect
     http.end();  
-    }
+  }
 
-
-  delay(30000);
+  delay(1000);
 }
 
 //블루투스 연결 이벤트
