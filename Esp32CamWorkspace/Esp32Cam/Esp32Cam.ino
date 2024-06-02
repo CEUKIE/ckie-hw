@@ -24,9 +24,26 @@ String PW = "";
 
 
 //카메라
-#include "camera_pins.h"
-#include "soc/soc.h" //disable brownour problems
-#include "soc/rtc_cntl_reg.h"  //disable brownour problems
+#include "esp_camera.h"
+// Pin definition for CAMERA_MODEL_AI_THINKER
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
+#define Y9_GPIO_NUM       35
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       39
+#define Y6_GPIO_NUM       36
+#define Y5_GPIO_NUM       21
+#define Y4_GPIO_NUM       19
+#define Y3_GPIO_NUM       18
+#define Y2_GPIO_NUM        5
+#define VSYNC_GPIO_NUM    25
+#define HREF_GPIO_NUM     23
+#define PCLK_GPIO_NUM     22
+
+camera_fb_t * fb = NULL;
 
 
 //http
@@ -34,6 +51,16 @@ String PW = "";
 #include <HTTPClient.h>
 
 //websocket
+#include <ArduinoWebsockets.h>
+
+const char* websockets_server_host = "serverip_or_name"; //Enter server adress
+const uint16_t websockets_server_port = 8080; // Enter server port
+
+using namespace websockets;
+
+
+WebsocketsClient client;
+
 
 //테스트용 임시 온습도 설정
 String MAXHum = "40.0";
@@ -56,7 +83,23 @@ void setup() {
 
   WIFI_connect();           //WIFI 연결
 
-  // send_MAXMINdata();        //최대 최소 온습도 전달
+  send_MAXMINdata();        //최대 최소 온습도 전달
+
+  //웹소켓
+    // try to connect to Websockets server
+  bool connected = client.connect(websockets_server_host, websockets_server_port, "/");
+  if(connected) {
+      Serial.println("Connected!");
+      client.send("Hello Server");
+  } else {
+      Serial.println("Not Connected!");
+  }
+  
+  // run callback when messages are received
+  client.onMessage([&](WebsocketsMessage message){
+      Serial.print("Got Message: ");
+      Serial.println(message.data());
+  });
 }
 
 void loop() {
@@ -100,6 +143,13 @@ void loop() {
   }
 
   delay(1000);
+
+  //웹소켓
+  // let the websockets client check for incoming messages
+  if(client.available()) {
+      client.poll();
+  }
+  delay(500);
 }
 
 //블루투스 연결 이벤트
