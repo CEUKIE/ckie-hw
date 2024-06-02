@@ -24,6 +24,7 @@ String PW = "";
 
 
 //카메라
+<<<<<<< HEAD
 #include "esp_camera.h"
 // Pin definition for CAMERA_MODEL_AI_THINKER
 #define PWDN_GPIO_NUM     32
@@ -44,6 +45,9 @@ String PW = "";
 #define PCLK_GPIO_NUM     22
 
 camera_fb_t * fb = NULL;
+=======
+#include ""
+>>>>>>> parent of 41d531e (feat : changes)
 
 
 //http
@@ -84,6 +88,7 @@ void setup() {
   WIFI_connect();           //WIFI 연결
 
   send_MAXMINdata();        //최대 최소 온습도 전달
+<<<<<<< HEAD
 
   //웹소켓
     // try to connect to Websockets server
@@ -100,11 +105,12 @@ void setup() {
       Serial.print("Got Message: ");
       Serial.println(message.data());
   });
+=======
+>>>>>>> parent of 41d531e (feat : changes)
 }
 
 void loop() {
-
-  //현재 온습도 송신
+  //현재 온습도 수신
   if  (Serial_soft.available()){
     String text = Serial_soft.readStringUntil(';');
     Serial.println(text); //디버깅용
@@ -140,8 +146,9 @@ void loop() {
 
     // Disconnect
     http.end();  
-  }
+    }
 
+<<<<<<< HEAD
   delay(1000);
 
   //웹소켓
@@ -150,6 +157,10 @@ void loop() {
       client.poll();
   }
   delay(500);
+=======
+
+  delay(30000);
+>>>>>>> parent of 41d531e (feat : changes)
 }
 
 //블루투스 연결 이벤트
