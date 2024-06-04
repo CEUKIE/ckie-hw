@@ -3,8 +3,8 @@
 #include <HTTPClient.h>
 #include <cmath>
 
-String SSID = "";
-String PW = "";
+String SSID = "dlink1234";
+String PW = "14159265";
 
 String NOWTem = "25.0";
 String NOWHUM = "47.3";

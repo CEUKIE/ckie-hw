@@ -25,11 +25,14 @@ void setup(){
   }
 
   timeClient.begin();
+  timeClient.setTimeOffset(32400); // GMT+9
 }
 
 void loop() {
   timeClient.update();
+  int hour = timeClient.getHours();
 
+  Serial.println(hour);
   Serial.println(timeClient.getHours());
   Serial.println(timeClient.getFormattedTime());
 
