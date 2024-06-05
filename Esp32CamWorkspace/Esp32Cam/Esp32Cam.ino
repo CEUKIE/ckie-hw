@@ -8,14 +8,13 @@
 #include <BLE2902.h>
 #include <SoftwareSerial.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <WiFiUdp.h>
 #include <NTPClient.h>
-#include <ArduinoUniqueID.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
-#include <WebSocketClient.h>
-#include <SeocketIOclient.h>
-#include "camera_pins.h"
+#include <WebSocketsClient.h>
+#include <SocketIOclient.h>
 
 #define RX 13
 #define TX 14
@@ -26,9 +25,10 @@
 
 SoftwareSerial Serial_soft(RX, TX);
 
-String UID = "", wifi_id = "dlink1234", wifi_pw = "14159265", MAXHum = "40.0", MINHum = "35.0", MAXTem = "29.7", MINTem = "20.8", NOWHUM = "", NOWTem = "";
+String UID = "", bluetooth_data="", wifi_id = "", wifi_pw = "14159265", 
+          MAXHum = "40.0", MINHum = "35.0", MAXTem = "29.7", MINTem = "20.8", NOWHUM = "12.0", NOWTem = "33.3";
 
-SocketIOclient socketIO
+SocketIOclient socketIO;
 
 // to-do
 // 테스트용 임시 온습도 설송
@@ -37,12 +37,11 @@ SocketIOclient socketIO
 // *************** bluetooth *************** 
 unsigned int CAGE_NUM = 1;
 
-
 bool deviceConnected = false;
 BLECharacteristic *pTxCharacteristic;
 BLECharacteristic *pRxCharacteristic;
 
-lass MyServerCallbacks : public BLEServerCallbacks {
+class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     Serial.println("[BLE] Bluetooth connected");
     deviceConnected = true;
@@ -74,7 +73,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 
 void BT_setup() {
   Serial.println("[SETUP] BLUETOOTH: " + String(CAGE_NUM) + ".NO HELMET BLUETOOTH SETUP START");
-  String bluetooth_name = "HEADWARE " + String(CAGE_NUM) + "번 케이지";
+  String bluetooth_name = "Esp32s3-cam";
 
   BLEDevice::init(bluetooth_name.c_str());
   
@@ -147,55 +146,85 @@ NTPClient timeClient(ntpUDP,"pool.ntp.org",32400);
 void TIME_setup() {
   Serial.println("[SETUP] TIME: SETUP START");
   timeClient.begin();
-  timeClient.setTimeOffset(32400);
+  timeClient.setTimeOffset(32400);  //GMT+9
   timeClient.forceUpdate();
   Serial.println("[SETUP] TIME: SETUP SUCCESS");
 }
 
 // *************** UID *************** 
-void UID_setup() {
-  for (size_t i = 0; i < 8; i++)
-	{
+// void UID_setup() {
+//   for (size_t i = 0; i < 8; i++)
+// 	{
 
-    UID += String(UniqueID8[i], HEX);
-	}
-}
+//     UID += String(UniqueID8[i], HEX);
+// 	}
+// }
 
 // *************** socket IO *************** 
 
-void seockIO_setup() {
-  socketIO.begin("ip", port);
-  socketIO.onEvent(socketIOEvent);
+void socketIO_setup() {
+  // socketIO.begin("ip", port);
+  // socketIO.onEvent(socketIOEvent);
 }
 
 void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
-    switch(type) {
-        case sIOtype_DISCONNECT:
-          // ...적절한 코드...
-        case sIOtype_CONNECT:
-            // ...적절한 코드...
+    // switch(type) {
+    //     case sIOtype_DISCONNECT:
+    //       // ...적절한 코드...
+    //     case sIOtype_CONNECT:
+    //         // ...적절한 코드...
 
-            // join default namespace (no auto join in Socket.IO V3)
-            socketIO.send(sIOtype_CONNECT, "/");
-            break;
-        case sIOtype_EVENT:
-            // ...적절한 코드...
-        case sIOtype_ACK:
-            // ...적절한 코드...
-        case sIOtype_ERROR:
-            // ...적절한 코드...
-        case sIOtype_BINARY_EVENT:
-            // ...적절한 코드...
-        case sIOtype_BINARY_ACK:
-            // ...적절한 코드...
-    }
+    //         // join default namespace (no auto join in Socket.IO V3)
+    //         socketIO.send(sIOtype_CONNECT, "/");
+    //         break;
+    //     case sIOtype_EVENT:
+    //         // ...적절한 코드...
+    //         switch (payload)
+    //         {
+    //         case "set-temp-humiddity":
+              
+    //           MAXHum = ;
+    //           MINHum = ;
+    //           send_MAXMINdata();
+    //           breake;
+    //         case "request-temp-humidity":
+    //           DynamicJsonDocument doc(4096);
+    //           doc["temperature"] = NOWTem.toFloat();
+    //           doc["humidity"] = NOWHUM.toFloat();
+    //           doc["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
+
+    //           // Serialize JSON document
+    //           String nowdatajson;
+    //           serializeJson(doc, nowdatajson);
+
+    //           socketIO.send("response-temp-humidity", nowdatajson);
+    //           break;
+    //         case "request-img":
+    //           //이미지 전송
+
+
+    //           break;
+    //         }
+           
+    //     case sIOtype_ACK:
+    //         // ...적절한 코드...
+    //     case sIOtype_ERROR:
+    //         // ...적절한 코드...
+    //     case sIOtype_BINARY_EVENT:
+    //         // ...적절한 코드...
+    //     case sIOtype_BINARY_ACK:
+    //         // ...적절한 코드...
+    // }
 } 
 
 // *************** send MAX MIN data *************** 
 
 void send_MAXMINdata() {
-  Serial_soft.print(MAXTem + " " + MINTem + " " + MAXHum + " " + MINHum + " " + MINHum + ";");
-  delay(1000);
+  while (MAXTem == "" || MINTem == "" || MAXHum == "" || MINHum == "")
+  {
+    Serial_soft.print(MAXTem + " " + MINTem + " " + MAXHum + " " + MINHum + " " + MINHum + ";");
+    delay(1000);
+  }
 }
 
 
@@ -205,58 +234,60 @@ void setup() {
   Serial.begin(115200);     //시리얼 통신 속도 설정
   Serial_soft.begin(9600);  //소프트웨어 시리얼 통신 속도 설정
 
-  UID_setup();              //UID 저장
+  // UID_setup();              //UID 저장
+  BT_setup();
+  WIFI_setup();           //WIFI 연결
+  socketIO_setup();
 
-  WIFI_connect();           //WIFI 연결
-  
 
-
-  send_MAXMINdata();        //최대 최소 온습도 전달 미완성
+  // send_MAXMINdata();        //최대 최소 온습도 전달 미완성
 }
 
 // *************** loop *************** 
 void loop() {
   //현재 온습도 수신
-  if  (Serial_soft.available()){
-    String text = Serial_soft.readStringUntil(';');
-    Serial.println(text); //디버깅용
-    int index = text.indexOf(' ');
-    NOWTem = text.substring(0, index);
-    NOWHUM = text.substring(index + 1);
-    NOWTem.trim();
-    NOWHUM.trim();
-    //디버깅용
-    Serial.println("nowtemp : " + NOWTem);
-    Serial.println("nowhum : " + NOWHUM);
-    Serial.println();
-
-    //현재 온습도 http 전송
-    // Prepare JSON document
-    DynamicJsonDocument doc(4096);
-    doc["temperature"] = NOWTem.toFloat();
-    doc["humidity"] = NOWHUM.toFloat();
-    doc["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
-
-    // Serialize JSON document
-    String json;
-    serializeJson(doc, json);
-
-    WiFiClient client;  // or WiFiClientSecure for HTTPS
-    HTTPClient http;
-
-    // Send request
-    http.begin(client, "http://httpbin.org/post");
-    http.POST(json);
-
-    // Read response
-    Serial.print(http.getString());
-
-    // Disconnect
-    http.end();  
-    }
+  // if  (Serial_soft.available()){
+  //   String text = Serial_soft.readStringUntil(';');
+  //   Serial.println(text); //디버깅용
+  //   int index = text.indexOf(' ');
+  //   NOWTem = text.substring(0, index);
+  //   NOWHUM = text.substring(index + 1);
+  //   NOWTem.trim();
+  //   NOWHUM.trim();
+  //   //디버깅용
+  //   Serial.println("nowtemp : " + NOWTem);
+  //   Serial.println("nowhum : " + NOWHUM);
+  //   Serial.println();
+  //}
 
 
-  delay(30000);
+
+  // delay(30000);
+  //현재 온습도 http 전송
+  // Prepare JSON document
+  DynamicJsonDocument doc(4096);
+  doc["temperature"] = NOWTem.toFloat();
+  doc["humidity"] = NOWHUM.toFloat();
+  doc["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
+
+  // Serialize JSON document
+  String json;
+  serializeJson(doc, json);
+
+  WiFiClientSecure client;  // or WiFiClientSecure for HTTPS
+  HTTPClient http;
+
+  // Send request
+  http.begin(client, "https://api.ckie.store/cage-states");
+  http.POST(json);
+
+  // Read response
+  Serial.print(http.getString());
+
+  // Disconnect
+  http.end();  
+
+  delay(10000);
 }
 
 
