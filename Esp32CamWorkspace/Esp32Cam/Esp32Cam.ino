@@ -20,18 +20,19 @@
 
 #define RX 47
 #define TX 21
-#define SERVICE_UUID "c672da8f-05c6-472f-87d8-34201a97468f"
+#define SERVICE_UUID "2f05b2a5-079f-4a07-b9c0-3b1fe7d615c9"
 #define CHARACTERISTIC_READ "01e7eeab-2597-4c54-84e8-2fceb73c645d"
 #define CHARACTERISTIC_WRITE "5a9edc71-80cb-4159-b2e6-a2913b761026"
 
 
 SoftwareSerial Serial_soft(RX, TX);
 
-int now_hour = 0;
+int now_hour = 0, port = 0;
 
-String UID = "", bluetooth_data="", wifi_id = "", wifi_pw = "", 
-          MAXHum = "40.0", MINHum = "35.0", MAXTem = "29.7", MINTem = "20.8", NOWHUM = "12.0", NOWTem = "33.3",
-          ip = "", port = "";
+String UID = "", bluetooth_data="", MAXHum = "", MINHum = "", 
+          MAXTem = "", MINTem = "", NOWHUM = "12.0", NOWTem = "33.3",
+          wifi_id = "", wifi_pw = "",
+          ip = "";
 
 SocketIOclient socketIO;
 
@@ -65,21 +66,64 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     String rxValue = pCharacteristic->getValue().c_str();
     if (rxValue.length() > 0) {
       bluetooth_data = rxValue;
-      if(bluetooth_data.startsWith("wi ")){
-        wifi_id = bluetooth_data.substring(3);
-        Serial.println("[BLE] WIFI ID = " + wifi_id);
+      //"wifi_id dlink1234; wifi_pw 14159265; min_temp 24.5; max_temp 26; min_humidity 60.4; max_humidity 70;"
+      while (wifi_id == "" || wifi_pw == "" || MAXTem == "" || MINTem == "" || MAXHum == "" || MINHum == "")
+      {
+        if (bluetooth_data.indexOf("wifi_id") != -1)
+        {
+          int start = bluetooth_data.indexOf("wifi_id") + 8;
+          int end = bluetooth_data.indexOf(';', start);
+          wifi_id = bluetooth_data.substring(start, end);
+        }
+        if (bluetooth_data.indexOf("wifi_pw") != -1)
+        {
+          int start = bluetooth_data.indexOf("wifi_pw") + 8;
+          int end = bluetooth_data.indexOf(';', start);
+          wifi_pw = bluetooth_data.substring(start, end);
+        }
+        if (bluetooth_data.indexOf("min_temp") != -1)
+        {
+          int start = bluetooth_data.indexOf("min_temp") + 9;
+          int end = bluetooth_data.indexOf(';', start);
+          MINTem = bluetooth_data.substring(start, end);
+        }
+        if (bluetooth_data.indexOf("max_temp") != -1)
+        {
+          int start = bluetooth_data.indexOf("max_temp") + 9;
+          int end = bluetooth_data.indexOf(';', start);
+          MAXTem = bluetooth_data.substring(start, end);
+        }
+        if (bluetooth_data.indexOf("min_humidity") != -1)
+        {
+          int start = bluetooth_data.indexOf("min_humidity") + 13;
+          int end = bluetooth_data.indexOf(';', start);
+          MINHum = bluetooth_data.substring(start, end);
+        }
+        if (bluetooth_data.indexOf("max_humidity") != -1)
+        {
+          int start = bluetooth_data.indexOf("max_humidity") + 13;
+          int end = bluetooth_data.indexOf(';', start);
+          MAXHum = bluetooth_data.substring(start, end);
+        }
       }
-      else if(bluetooth_data.startsWith("wp ")){
-        wifi_pw = bluetooth_data.substring(3);
-        Serial.println("[BLE] WIFI PW = " + wifi_pw);
-      }
+
+      // if(bluetooth_data.startsWith("wi ")){
+      //   wifi_id = bluetooth_data.substring(3);
+      //   Serial.println("[BLE] WIFI ID = " + wifi_id);
+      // }
+      // else if(bluetooth_data.startsWith("wp ")){
+      //   wifi_pw = bluetooth_data.substring(3);
+      //   Serial.println("[BLE] WIFI PW = " + wifi_pw);
+      // }
+      Serial.println(wifi_id + wifi_pw + MAXTem + MINTem + MAXHum + MINHum);
+      Serial.println(bluetooth_data);
     }
   }
 };
 
 void BT_setup() {
-  Serial.println("[SETUP] BLUETOOTH: " + String(CAGE_NUM) + ".NO HELMET BLUETOOTH SETUP START");
-  String bluetooth_name = "Esp32s3-cam";
+  Serial.println("[SETUP] BLUETOOTH: " + String(CAGE_NUM) + ".NO BLUETOOTH SETUP START");
+  String bluetooth_name = "Ckie";
 
   BLEDevice::init(bluetooth_name.c_str());
   
@@ -128,7 +172,10 @@ void WIFI_setup(){
     pTxCharacteristic->setValue("wifi_pw");
     pTxCharacteristic->notify();
     delay(5000);
-    Serial.println("WIFI ID = " + wifi_id + " PASSWORD = " + wifi_pw);
+    Serial.print("WIFI ID = ");
+    Serial.println(wifi_id);
+    Serial.print("PASSWORD = ");
+    Serial.println(wifi_pw);
     WiFi.begin(wifi_id, wifi_pw);
     delay(15000);
     if(WiFi.status() == WL_CONNECTED){
@@ -137,7 +184,10 @@ void WIFI_setup(){
     else{
       Serial.println("연결안됨");
     }
-    Serial.println("[SETUP] WIFI ID = " + wifi_id + " WIFI PASSWORD = " + wifi_pw);
+    Serial.print("WIFI ID = ");
+    Serial.println(wifi_id);
+    Serial.print("PASSWORD = ");
+    Serial.println(wifi_pw);
   }
   
   Serial.println("[SETUP] WIFI: SETUP SUCCESS");
