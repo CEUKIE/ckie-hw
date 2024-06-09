@@ -76,7 +76,10 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     String rxValue = pCharacteristic->getValue().c_str();
     if (rxValue.length() > 0) {
       bluetooth_data = rxValue;
-      //"wifi_id dlink1234; wifi_pw 14159265; min_temp 24.5; max_temp 26; min_humidity 60.4; max_humidity 70;"
+      /*
+      데이터 전달 형식
+      "wifi_id str; wifi_pw str; min_temp str; max_temp str; min_humidity str; max_humidity str;"
+      */
       while (wifi_id == "" || wifi_pw == "" || MAXTem == "" || MINTem == "" || MAXHum == "" || MINHum == "")
       {
         if (bluetooth_data.indexOf("wifi_id") != -1)
@@ -125,7 +128,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 };
 
 void BT_setup() {
-  Serial.println("[SETUP] BLUETOOTH: " + String(CAGE_NUM) + ".NO BLUETOOTH SETUP START");
+  Serial.println("[SETUP] BLUETOOTH SETUP START");
   String bluetooth_name = "Ckie";
 
   BLEDevice::init(bluetooth_name.c_str());
@@ -154,7 +157,7 @@ void BT_setup() {
     delay(1000);
   }
 
-  Serial.println("[SETUP] BLUETOOTH: " + String(CAGE_NUM) + ".NO CAGE BLUETOOTH SETUP SUCCESS");
+  Serial.println("[SETUP] BLUETOOTH SETUP SUCCESS");
 }
 
 
@@ -209,7 +212,7 @@ void TIME_setup() {
   timeClient.forceUpdate();
   Serial.println("[SETUP] TIME: SETUP SUCCESS");
 }
-
+// 시간 변경 체크 후 현재 온습도 전송
 void update_hour() {
   if (now_hour != timeClient.getHours())
   {
@@ -218,17 +221,7 @@ void update_hour() {
   }
 }
 
-// *************** UID *************** 
-// void UID_setup() {
-//   for (size_t i = 0; i < 8; i++)
-// 	{
-
-//     UID += String(UniqueID8[i], HEX);
-// 	}
-// }
-
 // *************** socket IO *************** 
-
 void socketIO_setup() {
   socketIO.begin("192.168.1.1", 8080, "/socket.io/?EIO=4");
   socketIO.onEvent(socketIOEvent);
