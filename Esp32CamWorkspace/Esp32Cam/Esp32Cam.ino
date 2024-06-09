@@ -41,13 +41,8 @@ SocketIOclient socketIO;
 
 bool esp32_setup = false;
 
-// *************** software reset *************** 
-void restart_esp32 () {
-  ESP.restart();
-  delay(1000);
-}
-
 // *************** bluetooth *************** 
+
 unsigned int CAGE_NUM = 1;
 
 bool deviceConnected = false;
@@ -154,26 +149,19 @@ void BT_setup() {
   }
 
   Serial.println("[SETUP] BLUETOOTH SETUP SUCCESS");
+  send_MAXMINdata();
 }
 
-
 // *************** WIFI *************** 
+
 void WIFI_setup(){
   Serial.println("[SETUP] WIFI: SETUP START");
 
   while (true)
   {
-    pTxCharacteristic->setValue("wifi");
+    pTxCharacteristic->setValue("wifi set up");
     pTxCharacteristic->notify();
 
-    while(wifi_id == ""){
-      pTxCharacteristic->setValue("wifi_id");
-      pTxCharacteristic->notify();
-      delay(1000);
-    }
-    pTxCharacteristic->setValue("wifi_pw");
-    pTxCharacteristic->notify();
-    delay(5000);
     Serial.print("WIFI ID = ");
     Serial.println(wifi_id);
     Serial.print("PASSWORD = ");
@@ -198,6 +186,7 @@ void WIFI_setup(){
 }
 
 // *************** get GMT+9 time *************** 
+
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP,"pool.ntp.org",32400);
 
@@ -218,6 +207,7 @@ void update_hour() {
 }
 
 // *************** socket IO *************** 
+
 void socketIO_setup() {
   socketIO.begin("192.168.1.1", 8080, "/socket.io/?EIO=4");
   socketIO.onEvent(socketIOEvent);
@@ -242,7 +232,6 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
         {
           grab_send_img();
         }
-        //
         else if (msg.indexOf("change-temp"))
         {
           JsonDocument temp;
@@ -323,12 +312,10 @@ void get_now_data() {
 }
 
 
-// *************** send Now data *************** 
+// *************** send now data *************** 
 
 void send_now_data() {
-  //현재 온습도
-
-  // Send request https 전송
+  // https POST request
   // Prepare JSON document
   DynamicJsonDocument doc(4096);
   doc["temperature"] = NOWTem.toFloat();
@@ -432,8 +419,12 @@ void grab_send_img() {
   }
 }
 
+// *************** software reset *************** 
 
-
+void restart_esp32 () {
+  ESP.restart();
+  delay(1000);
+}
 
 // *************** setup *************** 
 void setup() {
@@ -447,9 +438,11 @@ void setup() {
   socketIO_setup();
   delay(1000);           
   camera_setup();
+  delay(1000);
+  TIME_setup();
   delay(1000);           
 
-  // setup 완료시 notify TRUE로 변경
+  // setup 완료시 ble notify TRUE로 변경
   esp32_setup = true
   pTxCharacteristic->setValue(esp32_setup);
   pTxCharacteristic->notify();
@@ -461,10 +454,8 @@ void loop() {
   delay(1000);
   get_now_data();
   delay(1000);
-
-  send_now_data();
-
-  delay(10000);
+  update_hour();
+  delay(1000);
 }
 
 
