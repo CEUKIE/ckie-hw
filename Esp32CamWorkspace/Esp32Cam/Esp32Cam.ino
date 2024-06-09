@@ -240,7 +240,7 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
           
           socketIO.send("connect-cage", cage);          
         }
-        if (msg.indexOf("camera") != -1)
+        else if (msg.indexOf("camera") != -1)
         {
           grab_send_img();
         }
