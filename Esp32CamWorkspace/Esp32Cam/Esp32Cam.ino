@@ -297,7 +297,7 @@ void get_now_data() {
   //현재 온습도 수신
   if  (Serial_soft.available()){
     String text = Serial_soft.readStringUntil(';');
-    Serial.println(text); //디버깅용
+    Serial.println("payload : " + text); //디버깅용
     int index = text.indexOf(' ');
     NOWTem = text.substring(0, index);
     NOWHUM = text.substring(index + 1);
@@ -428,7 +428,6 @@ void setup() {
   Serial.begin(115200);     //시리얼 통신 속도 설정
   Serial_soft.begin(9600);  //소프트웨어 시리얼 통신 속도 설정
 
-  // UID_setup();              //UID 저장
   BT_setup();
   delay(1000);
   WIFI_setup();     
@@ -438,6 +437,7 @@ void setup() {
   camera_setup();
   delay(1000);           
 
+  // setup 완료시 notify TRUE로 변경
   esp32_setup = true
   pTxCharacteristic->setValue(esp32_setup);
   pTxCharacteristic->notify();
@@ -449,9 +449,6 @@ void loop() {
   delay(1000);
   get_now_data();
   delay(1000);
-
-
-  // delay(30000);
 
   send_now_data();
 
