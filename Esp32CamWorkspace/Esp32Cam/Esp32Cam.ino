@@ -24,6 +24,9 @@
 #define CHARACTERISTIC_READ "01e7eeab-2597-4c54-84e8-2fceb73c645d"
 #define CHARACTERISTIC_WRITE "5a9edc71-80cb-4159-b2e6-a2913b761026"
 
+const char* rootCACertificate = \
+"\n";
+
 
 SoftwareSerial Serial_soft(RX, TX);
 
@@ -235,12 +238,14 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
   switch(type) {
     case sIOtype_DISCONNECT:
       // ...적절한 코드...
+
+      socketIO.send(sIOtype_DISCONNECT, "/CKIE Disconnected!");
       break;
     case sIOtype_CONNECT:
       // ...적절한 코드...
 
       // join default namespace (no auto join in Socket.IO V3)
-      socketIO.send(sIOtype_CONNECT, "/");
+      socketIO.send(sIOtype_CONNECT, "/CKIE Connected!");
       break;
     case sIOtype_EVENT:
       // ...적절한 코드...
@@ -251,7 +256,12 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
         {
           grab_send_img();
         }
-        else if (msg.indexOf("set-temp-humiddity") != -1)
+        else if (msg.indexOf("change-temp"))
+        {
+          
+        }
+        
+        else if (msg.indexOf("change-humiddity") != -1)
         {
           // 데이터 처리 부분 미완성
           // MAXTem = ;
@@ -311,29 +321,34 @@ void get_now_data() {
 // *************** send Now data *************** 
 
 void send_now_data() {
-  //현재 온습도 http 전송
+  //현재 온습도
+
+  // Send request https 전송
   // Prepare JSON document
   DynamicJsonDocument doc(4096);
   doc["temperature"] = NOWTem.toFloat();
   doc["humidity"] = NOWHUM.toFloat();
-  doc["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
+  doc["cageId"] = SERVICE_UUID;
 
   // Serialize JSON document
   String json;
   serializeJson(doc, json);
 
-  WiFiClientSecure client;  // or WiFiClientSecure for HTTPS
-  HTTPClient http;
+  WiFiClientSecure *client = new WiFiClientSecure;
+  if (client)
+  {
+    client->setCACert(rootCACertificate);
 
-  // Send request
-  http.begin(client, "https://api.ckie.store/cage-states");
-  http.POST(json);
-
+    HTTPClient https;
+    https.begin(client, "https://api.ckie.store/cage-states");
+    https.POST(json);
+  }
   // Read response
-  Serial.print(http.getString());
+  Serial.print(https.getString());
 
   // Disconnect
-  http.end();  
+  https.end();
+  delay(1000);  
 }
 
 // *************** camera *************** 
