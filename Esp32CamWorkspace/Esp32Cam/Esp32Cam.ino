@@ -41,10 +41,6 @@ SocketIOclient socketIO;
 
 bool esp32_setup = false;
 
-// to-do
-// 카메라 전송
-// 소캣 io 테스트
-
 // *************** software reset *************** 
 void restart_esp32 () {
   ESP.restart();
@@ -230,18 +226,15 @@ void socketIO_setup() {
 void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
   switch(type) {
     case sIOtype_DISCONNECT:
-      // ...적절한 코드...
 
       socketIO.send(sIOtype_DISCONNECT, "/CKIE Disconnected!");
       break;
     case sIOtype_CONNECT:
-      // ...적절한 코드...
 
       // join default namespace (no auto join in Socket.IO V3)
       socketIO.send(sIOtype_CONNECT, "/CKIE Connected!");
       break;
     case sIOtype_EVENT:
-      // ...적절한 코드...
       {
         Serial.printf("[IOc] get event: %s\n", payload);
         String msg = (char*)payload;
@@ -249,23 +242,42 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
         {
           grab_send_img();
         }
+        //
         else if (msg.indexOf("change-temp"))
         {
-          
+          JsonDocument temp;
+          deserializeJson(temp, payload);
+          float minTemp = temp["minTemp"];
+          float maxTemp = temp["maxTemp"];
+
+          MINTem = String(minTemp, 1);
+          MAXTem = String(maxTemp, 1);      
+          send_MAXMINdata();
         }
-        
         else if (msg.indexOf("change-humiddity") != -1)
         {
-          // 데이터 처리 부분 미완성
-          // MAXTem = ;
-          // MINTem = ;
-          // MAXHum = ;
-          // MINHum = ;
+          JsonDocument humidity;
+          deserializeJson(humidity, payload);
+          float minhumidity = humidity["minHumidity"];
+          float maxhumidity = humidity["maxHumidity"];
+
+          MINHum = String(minhumidity, 1);
+          MAXHum = String(maxhumidity, 1);
           send_MAXMINdata();            
         }
         else if (msg.indexOf("request-temp-humidity") != -1)
         {
-          send_now_data();
+          // Prepare JSON document
+          DynamicJsonDocument doc(4096);
+          doc["temperature"] = NOWTem.toFloat();
+          doc["humidity"] = NOWHUM.toFloat();
+          doc["cageId"] = SERVICE_UUID;
+
+          // Serialize JSON document
+          String now_data;
+          serializeJson(doc, now_data);
+          
+          socketIO.send("response-temp-humidity", now_data);
         }
         
         break;
@@ -324,8 +336,8 @@ void send_now_data() {
   doc["cageId"] = SERVICE_UUID;
 
   // Serialize JSON document
-  String json;
-  serializeJson(doc, json);
+  String now_data;
+  serializeJson(doc, now_data);
 
   WiFiClientSecure *client = new WiFiClientSecure;
   if (client)
@@ -334,7 +346,7 @@ void send_now_data() {
 
     HTTPClient https;
     https.begin(client, "https://api.ckie.store/cage-states");
-    https.POST(json);
+    https.POST(now_data);
   }
   // Read response
   Serial.print(https.getString());
