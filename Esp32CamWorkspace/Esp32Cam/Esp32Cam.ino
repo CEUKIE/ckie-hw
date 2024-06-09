@@ -445,7 +445,8 @@ void setup() {
   camera_setup();
   delay(1000);           
 
-  pTxCharacteristic->setValue("setup complete!");
+  esp32_setup = true
+  pTxCharacteristic->setValue(esp32_setup);
   pTxCharacteristic->notify();
 }
 
