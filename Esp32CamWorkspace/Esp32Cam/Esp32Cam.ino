@@ -228,6 +228,18 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
       {
         Serial.printf("[IOc] get event: %s\n", payload);
         String msg = (char*)payload;
+        if (msg.indexOf("connect-cage") != -1)
+        {
+          // Prepare JSON document
+          DynamicJsonDocument doc(4096);
+          doc["cageId"] = SERVICE_UUID;
+
+          // Serialize JSON document
+          String cage;
+          serializeJson(doc, cage);
+          
+          socketIO.send("connect-cage", cage);          
+        }
         if (msg.indexOf("camera") != -1)
         {
           grab_send_img();
