@@ -15,6 +15,8 @@
 #include <HTTPClient.h>
 #include <WebSocketsClient.h>
 #include <SocketIOclient.h>
+#include "camera_pins.h"
+#include "esp_camera.h"
 
 #define RX 13
 #define TX 14
@@ -25,14 +27,18 @@
 
 SoftwareSerial Serial_soft(RX, TX);
 
-String UID = "", bluetooth_data="", wifi_id = "", wifi_pw = "14159265", 
-          MAXHum = "40.0", MINHum = "35.0", MAXTem = "29.7", MINTem = "20.8", NOWHUM = "12.0", NOWTem = "33.3";
+int now_hour = 0;
+
+String UID = "", bluetooth_data="", wifi_id = "", wifi_pw = "", 
+          MAXHum = "40.0", MINHum = "35.0", MAXTem = "29.7", MINTem = "20.8", NOWHUM = "12.0", NOWTem = "33.3",
+          ip = "", port = "";
 
 SocketIOclient socketIO;
 
 // to-do
-// 테스트용 임시 온습도 설송
 // 카메라 전송
+// 소캣 io 테스트
+// https 구현
 
 // *************** bluetooth *************** 
 unsigned int CAGE_NUM = 1;
@@ -139,7 +145,7 @@ void WIFI_setup(){
   pTxCharacteristic->notify();
 }
 
-// *************** time *************** 
+// *************** get GMT+9 time *************** 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP,"pool.ntp.org",32400);
 
@@ -149,6 +155,14 @@ void TIME_setup() {
   timeClient.setTimeOffset(32400);  //GMT+9
   timeClient.forceUpdate();
   Serial.println("[SETUP] TIME: SETUP SUCCESS");
+}
+
+void update_hour() {
+  if (now_hour != timeClient.getHours())
+  {
+    now_hour = timeClient.getHours();
+    send_now_data();
+  }
 }
 
 // *************** UID *************** 
@@ -163,58 +177,55 @@ void TIME_setup() {
 // *************** socket IO *************** 
 
 void socketIO_setup() {
-  // socketIO.begin("ip", port);
-  // socketIO.onEvent(socketIOEvent);
+  socketIO.begin("192.168.1.1", 8080, "/socket.io/?EIO=4");
+  socketIO.onEvent(socketIOEvent);
 }
 
 void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
-    // switch(type) {
-    //     case sIOtype_DISCONNECT:
-    //       // ...적절한 코드...
-    //     case sIOtype_CONNECT:
-    //         // ...적절한 코드...
+  switch(type) {
+    case sIOtype_DISCONNECT:
+      // ...적절한 코드...
+      break;
+    case sIOtype_CONNECT:
+      // ...적절한 코드...
 
-    //         // join default namespace (no auto join in Socket.IO V3)
-    //         socketIO.send(sIOtype_CONNECT, "/");
-    //         break;
-    //     case sIOtype_EVENT:
-    //         // ...적절한 코드...
-    //         switch (payload)
-    //         {
-    //         case "set-temp-humiddity":
-              
-    //           MAXHum = ;
-    //           MINHum = ;
-    //           send_MAXMINdata();
-    //           breake;
-    //         case "request-temp-humidity":
-    //           DynamicJsonDocument doc(4096);
-    //           doc["temperature"] = NOWTem.toFloat();
-    //           doc["humidity"] = NOWHUM.toFloat();
-    //           doc["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
-
-    //           // Serialize JSON document
-    //           String nowdatajson;
-    //           serializeJson(doc, nowdatajson);
-
-    //           socketIO.send("response-temp-humidity", nowdatajson);
-    //           break;
-    //         case "request-img":
-    //           //이미지 전송
-
-
-    //           break;
-    //         }
-           
-    //     case sIOtype_ACK:
-    //         // ...적절한 코드...
-    //     case sIOtype_ERROR:
-    //         // ...적절한 코드...
-    //     case sIOtype_BINARY_EVENT:
-    //         // ...적절한 코드...
-    //     case sIOtype_BINARY_ACK:
-    //         // ...적절한 코드...
-    // }
+      // join default namespace (no auto join in Socket.IO V3)
+      socketIO.send(sIOtype_CONNECT, "/");
+      break;
+    case sIOtype_EVENT:
+      // ...적절한 코드...
+      {
+        Serial.printf("[IOc] get event: %s\n", payload);
+        String msg = (char*)payload;
+        if (msg.indexOf("camera") != -1)
+        {
+          grab_send_img();
+        }
+        else if (msg.indexOf("set-temp-humiddity") != -1)
+        {
+          // 데이터 처리 부분 미완성
+          // MAXTem = ;
+          // MINTem = ;
+          // MAXHum = ;
+          // MINHum = ;
+          send_MAXMINdata();            
+        }
+        else if (msg.indexOf("request-temp-humidity") != -1)
+        {
+          send_now_data();
+        }
+        
+        break;
+      }
+    case sIOtype_ACK:
+      break;
+    case sIOtype_ERROR:
+      break;
+    case sIOtype_BINARY_EVENT:
+      break;
+    case sIOtype_BINARY_ACK:
+      break;
+  }
 } 
 
 // *************** send MAX MIN data *************** 
@@ -227,42 +238,29 @@ void send_MAXMINdata() {
   }
 }
 
+// ************** get now data *************** 
 
-
-// *************** setup *************** 
-void setup() {
-  Serial.begin(115200);     //시리얼 통신 속도 설정
-  Serial_soft.begin(9600);  //소프트웨어 시리얼 통신 속도 설정
-
-  // UID_setup();              //UID 저장
-  BT_setup();
-  WIFI_setup();           //WIFI 연결
-  socketIO_setup();
-
-
-  // send_MAXMINdata();        //최대 최소 온습도 전달 미완성
+void get_now_data() {
+  //현재 온습도 수신
+  if  (Serial_soft.available()){
+    String text = Serial_soft.readStringUntil(';');
+    Serial.println(text); //디버깅용
+    int index = text.indexOf(' ');
+    NOWTem = text.substring(0, index);
+    NOWHUM = text.substring(index + 1);
+    NOWTem.trim();
+    NOWHUM.trim();
+    //디버깅용
+    Serial.println("nowtemp : " + NOWTem);
+    Serial.println("nowhum : " + NOWHUM);
+    Serial.println();
+  }
 }
 
-// *************** loop *************** 
-void loop() {
-  //현재 온습도 수신
-  // if  (Serial_soft.available()){
-  //   String text = Serial_soft.readStringUntil(';');
-  //   Serial.println(text); //디버깅용
-  //   int index = text.indexOf(' ');
-  //   NOWTem = text.substring(0, index);
-  //   NOWHUM = text.substring(index + 1);
-  //   NOWTem.trim();
-  //   NOWHUM.trim();
-  //   //디버깅용
-  //   Serial.println("nowtemp : " + NOWTem);
-  //   Serial.println("nowhum : " + NOWHUM);
-  //   Serial.println();
-  //}
 
+// *************** send Now data *************** 
 
-
-  // delay(30000);
+void send_now_data() {
   //현재 온습도 http 전송
   // Prepare JSON document
   DynamicJsonDocument doc(4096);
@@ -286,6 +284,116 @@ void loop() {
 
   // Disconnect
   http.end();  
+}
+
+// *************** camera *************** 
+
+void camera_setup() {
+  Serial.println("[SETUP] CAMERA: SETUP START");
+  camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = Y2_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.xclk_freq_hz = 20000000;
+  config.frame_size = FRAMESIZE_HVGA;
+  config.pixel_format = PIXFORMAT_JPEG; // for streaming
+  //config.pixel_format = PIXFORMAT_RGB565; // for face detection/recognition
+  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.jpeg_quality = 12;
+  config.fb_count = 1;
+
+  if(psramFound()){
+      config.jpeg_quality = 10;
+      config.fb_count = 2;
+      config.grab_mode = CAMERA_GRAB_LATEST;
+  } else {
+      // Limit the frame size when PSRAM is not available
+      config.frame_size = FRAMESIZE_SVGA;
+      config.fb_location = CAMERA_FB_IN_DRAM;
+  }
+
+  while (esp_camera_init(&config) != ESP_OK) {
+      Serial.println("[ERROR] CAMERA: SETUP FAIL");
+      delay(500);
+  }
+  Serial.println("[SETUP] CAMERA: SETUP SUCCESS");
+}
+
+void grab_send_img() {
+  camera_fb_t *fb = esp_camera_fb_get();
+  if (fb != NULL && fb->format == PIXFORMAT_JPEG) {
+    String img = "";
+    for (size_t i = 0; i < fb->len; i++)
+    {
+      img += char(fb->buf[i]);
+    }
+    
+    DynamicJsonDocument doc(1024);
+    JsonArray array = doc.to<JsonArray>();
+    //array.add("event-name")
+    array.add("send-img");
+    //add payload
+    JsonObject param1 = array.createNestedObject();
+    param1["img"] = img;
+    String output;
+    serializeJson(doc, output);
+
+    // Send evnet
+    socketIO.sendEVENT(output);
+
+    // Print Json for debugging
+    Serial.println(output);
+  }
+}
+
+
+
+
+// *************** setup *************** 
+void setup() {
+  Serial.begin(115200);     //시리얼 통신 속도 설정
+  Serial_soft.begin(9600);  //소프트웨어 시리얼 통신 속도 설정
+
+  // UID_setup();              //UID 저장
+  BT_setup();
+  delay(1000);
+  WIFI_setup();     
+  delay(1000);           
+  socketIO_setup();
+  delay(1000);           
+  camera_setup();
+  delay(1000);           
+
+
+}
+
+// *************** loop *************** 
+void loop() {
+  socketIO.loop();
+  delay(1000);
+  get_now_data();
+  delay(1000);
+
+
+  // delay(30000);
+
+  send_now_data();
 
   delay(10000);
 }
