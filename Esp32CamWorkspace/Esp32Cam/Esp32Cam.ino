@@ -112,8 +112,8 @@ class MyCallbacks : public BLECharacteristicCallbacks {
       }
 
       Serial.println("wifi id : " + wifi_id + "wifi pw : " + wifi_pw);
-      Serial.println("max temp : " + MAXTem + "min temp : " + MINTem + "max hum : " + MAXHum + "min hum : " + MINHum)
-      Serial.println("payload : "bluetooth_data);
+      Serial.println("max temp : " + MAXTem + "min temp : " + MINTem + "max hum : " + MAXHum + "min hum : " + MINHum);
+      Serial.println("payload : " + bluetooth_data);
     }
   }
 };
@@ -230,15 +230,33 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
         String msg = (char*)payload;
         if (msg.indexOf("connect-cage") != -1)
         {
-          // Prepare JSON document
-          DynamicJsonDocument doc(4096);
-          doc["cageId"] = SERVICE_UUID;
+          // creat JSON message for Socket.IO (event)
+          //SocketIO로 보낼 JSON 메시지(=Event) 객체를 생성한다.
+          DynamicJsonDocument doc(1024);
+          JsonArray array = doc.to<JsonArray>();
 
-          // Serialize JSON document
-          String cage;
-          serializeJson(doc, cage);
-          
-          socketIO.send("connect-cage", cage);          
+          // add evnet name
+          // Hint: socket.on('event_name', ....
+          //객체에 event_name을 추가한다. 이벤트 처리함수의 매개변수 중 type에 해당하는 부분이다.
+          array.add("connect-cage");
+
+          // add payload (parameters) for the event
+          //객체에 데이터를 추가한다. 이벤트 처리함수의 매개변수 중 payload에 해당하는 부분이다.
+          JsonObject param1 = array.createNestedObject();
+          param1["cageId"] = SERVICE_UUID;
+
+          // JSON to String (serializion)
+          //JSON 메시지를 문자열로 직렬화한다.
+          String output;
+          serializeJson(doc, output);
+
+          // Send event
+          //직렬화한 메시지를 송신(전송)한다.
+          socketIO.sendEVENT(output);
+
+          // Print JSON for debugging
+          //보낸 메시지를 시리얼 모니터에 출력하여 확인한다.
+          Serial.println(output);
         }
         else if (msg.indexOf("camera") != -1)
         {
@@ -268,19 +286,25 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
         }
         else if (msg.indexOf("request-temp-humidity") != -1)
         {
-          // Prepare JSON document
-          DynamicJsonDocument doc(4096);
-          doc["temperature"] = NOWTem.toFloat();
-          doc["humidity"] = NOWHUM.toFloat();
-          doc["cageId"] = SERVICE_UUID;
+          DynamicJsonDocument doc(1024);
+          JsonArray array = doc.to<JsonArray>();
 
-          // Serialize JSON document
-          String now_data;
-          serializeJson(doc, now_data);
-          
-          socketIO.send("response-temp-humidity", now_data);
+          array.add("response-temp-humidity");
+
+          JsonObject param1 = array.createNestedObject();
+          param1["temperature"] = NOWTem.toFloat();
+          JsonObject param2 = array.createNestedObject();
+          param2["humidity"] = NOWHUM.toFloat();
+          JsonObject param3 = array.createNestedObject();
+          param3["cageId"] = SERVICE_UUID;
+
+          String output;
+          serializeJson(doc, output);
+
+          socketIO.sendEVENT(output);
+
+          Serial.println(output);
         }
-        
         break;
       }
     case sIOtype_ACK:
@@ -341,17 +365,20 @@ void send_now_data() {
   WiFiClientSecure *client = new WiFiClientSecure;
   if (client)
   {
+    Serial.println("https POST start");
     client->setCACert(rootCACertificate);
 
     HTTPClient https;
-    https.begin(client, "https://api.ckie.store/cage-states");
+    https.begin(*client, "https://api.ckie.store/cage-states");
     https.POST(now_data);
+    
+    // Read response
+    Serial.print(https.getString());
+    
+    // Disconnect
+    https.end();
   }
-  // Read response
-  Serial.print(https.getString());
 
-  // Disconnect
-  https.end();
   delay(1000);  
 }
 
@@ -455,8 +482,7 @@ void setup() {
   delay(1000);           
 
   // setup 완료시 ble notify TRUE로 변경
-  esp32_setup = true
-  pTxCharacteristic->setValue(esp32_setup);
+  pTxCharacteristic->setValue("setup completed");
   pTxCharacteristic->notify();
 }
 
