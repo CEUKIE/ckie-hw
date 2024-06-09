@@ -39,10 +39,17 @@ String UID = "", bluetooth_data="", MAXHum = "", MINHum = "",
 
 SocketIOclient socketIO;
 
+bool esp32_setup = false;
+
 // to-do
 // 카메라 전송
 // 소캣 io 테스트
-// https 구현
+
+// *************** software reset *************** 
+void restart_esp32 () {
+  ESP.restart();
+  delay(1000);
+}
 
 // *************** bluetooth *************** 
 unsigned int CAGE_NUM = 1;
@@ -110,16 +117,9 @@ class MyCallbacks : public BLECharacteristicCallbacks {
         }
       }
 
-      // if(bluetooth_data.startsWith("wi ")){
-      //   wifi_id = bluetooth_data.substring(3);
-      //   Serial.println("[BLE] WIFI ID = " + wifi_id);
-      // }
-      // else if(bluetooth_data.startsWith("wp ")){
-      //   wifi_pw = bluetooth_data.substring(3);
-      //   Serial.println("[BLE] WIFI PW = " + wifi_pw);
-      // }
-      Serial.println(wifi_id + wifi_pw + MAXTem + MINTem + MAXHum + MINHum);
-      Serial.println(bluetooth_data);
+      Serial.println("wifi id : " + wifi_id + "wifi pw : " + wifi_pw);
+      Serial.println("max temp : " + MAXTem + "min temp : " + MINTem + "max hum : " + MAXHum + "min hum : " + MINHum)
+      Serial.println("payload : "bluetooth_data);
     }
   }
 };
@@ -445,7 +445,8 @@ void setup() {
   camera_setup();
   delay(1000);           
 
-
+  pTxCharacteristic->setValue("setup complete!");
+  pTxCharacteristic->notify();
 }
 
 // *************** loop *************** 
