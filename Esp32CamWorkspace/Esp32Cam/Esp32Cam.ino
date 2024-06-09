@@ -457,6 +457,3 @@ void loop() {
   update_hour();
   delay(1000);
 }
-
-
-
