@@ -18,8 +18,8 @@
 #include "camera_pins.h"
 #include "esp_camera.h"
 
-#define RX 13
-#define TX 14
+#define RX 47
+#define TX 21
 #define SERVICE_UUID "c672da8f-05c6-472f-87d8-34201a97468f"
 #define CHARACTERISTIC_READ "01e7eeab-2597-4c54-84e8-2fceb73c645d"
 #define CHARACTERISTIC_WRITE "5a9edc71-80cb-4159-b2e6-a2913b761026"
