@@ -62,8 +62,6 @@ void loop() {
 
   // lcd 출력
   lcd_Screen(NOWTem, NOWHum);
-  delay(1000);
-
 
   //가습기 모듈 작동
   if (NOWHum < MINHum.toFloat() && NOWHum < MAXHum.toFloat())
@@ -74,9 +72,6 @@ void loop() {
   {
     digitalWrite(pinMICRO, LOW);
   }
-  
-  delay(1000);
-
 
   // 릴레이 작동
   if (NOWTem < MINTem.toFloat() && NOWTem < MAXTem.toFloat())
@@ -86,13 +81,9 @@ void loop() {
   else{
     digitalWrite(pinRelay, LOW);
   }
-  delay(1000);
-
-
 
   // 현재 온습도 송신 시리얼 통신 
   Serial_soft.println(String(NOWTem) + " " + String(NOWHum) + ";");
-  delay(1000);
 }
 
 //lcd 설정 함수
