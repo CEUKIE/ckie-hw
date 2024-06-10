@@ -25,17 +25,36 @@
 #define CHARACTERISTIC_WRITE "5a9edc71-80cb-4159-b2e6-a2913b761026"
 
 const char* rootCACertificate = \
-"\n";
+"-----BEGIN CERTIFICATE-----\n" \
+"MIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF\n" \
+"ADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6\n" \
+"b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL\n" \
+"MAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv\n" \
+"b3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj\n" \
+"ca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM\n" \
+"9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw\n" \
+"IFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6\n" \
+"VOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L\n" \
+"93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm\n" \
+"jgSubJrIqg0CAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMC\n" \
+"AYYwHQYDVR0OBBYEFIQYzIU07LwMlJQuCFmcx7IQTgoIMA0GCSqGSIb3DQEBCwUA\n" \
+"A4IBAQCY8jdaQZChGsV2USggNiMOruYou6r4lK5IpDB/G/wkjUu0yKGX9rbxenDI\n" \
+"U5PMCCjjmCXPI6T53iHTfIUJrU6adTrCC2qJeHZERxhlbI1Bjjt/msv0tadQ1wUs\n" \
+"N+gDS63pYaACbvXy8MWy7Vu33PqUXHeeE6V/Uq2V8viTO96LXFvKWlJbYK8U90vv\n" \
+"o/ufQJVtMVT8QtPHRh8jrdkPSHCa2XV4cdFyQzR1bldZwgJcJmApzyMZFo6IQ6XU\n" \
+"5MsI+yMRQ+hDKXJioaldXgjUkK642M4UwtBV8ob2xJNDd2ZhwLnoQdeXeGADbkpy\n" \
+"rqXRfboQnoZsG4q5WTP468SQvvG5\n"\
+"-----END CERTIFICATE-----\n";
 
 
 SoftwareSerial Serial_soft(RX, TX);
 
-int now_hour = 0, port = 0;
+int now_hour = -1, port = 8080;
 
-String UID = "", bluetooth_data="", MAXHum = "", MINHum = "", 
-          MAXTem = "", MINTem = "", NOWHUM = "12.0", NOWTem = "33.3",
-          wifi_id = "", wifi_pw = "",
-          ip = "";
+String UID = "", bluetooth_data="", MAXHum = "12", MINHum = "11", 
+          MAXTem = "12", MINTem = "11", NOWHUM = "12.0", NOWTem = "33.3",
+          wifi_id = "dlink1234", wifi_pw = "14159265",
+          url = "https://api.ckie.store/cage";
 
 SocketIOclient socketIO;
 
@@ -201,6 +220,7 @@ void TIME_setup() {
 void update_hour() {
   if (now_hour != timeClient.getHours())
   {
+    Serial.println("hour changed!");
     now_hour = timeClient.getHours();
     send_now_data();
   }
@@ -209,18 +229,18 @@ void update_hour() {
 // *************** socket IO *************** 
 
 void socketIO_setup() {
-  socketIO.begin("192.168.1.1", 8080, "/socket.io/?EIO=4");
+  socketIO.begin("3.36.227.176", 8080);
   socketIO.onEvent(socketIOEvent);
 }
 
 void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
   switch(type) {
     case sIOtype_DISCONNECT:
-
+      Serial.println("socket disconnected!");
       socketIO.send(sIOtype_DISCONNECT, "/CKIE Disconnected!");
       break;
     case sIOtype_CONNECT:
-
+      Serial.println("socket connected!");
       // join default namespace (no auto join in Socket.IO V3)
       socketIO.send(sIOtype_CONNECT, "/CKIE Connected!");
       break;
@@ -351,33 +371,32 @@ void get_now_data() {
 // *************** send now data *************** 
 
 void send_now_data() {
-  // https POST request
+  // http POST request
   // Prepare JSON document
   DynamicJsonDocument doc(4096);
   doc["temperature"] = NOWTem.toFloat();
   doc["humidity"] = NOWHUM.toFloat();
-  doc["cageId"] = SERVICE_UUID;
+  doc["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
 
   // Serialize JSON document
-  String now_data;
-  serializeJson(doc, now_data);
+  String json;
+  serializeJson(doc, json);
 
-  WiFiClientSecure *client = new WiFiClientSecure;
-  if (client)
-  {
-    Serial.println("https POST start");
-    client->setCACert(rootCACertificate);
+  WiFiClient client;
 
-    HTTPClient https;
-    https.begin(*client, "https://api.ckie.store/cage-states");
-    https.POST(now_data);
-    
-    // Read response
-    Serial.print(https.getString());
-    
-    // Disconnect
-    https.end();
-  }
+  Serial.println("http POST start" + json);
+  // client->setCACert(rootCACertificate);
+
+  HTTPClient http;
+  http.begin(client, "http://3.36.227.176:8080/cage-states");
+  http.addHeader("Content-Type", "application/json");
+  http.POST(json);
+  
+  // Read response
+  Serial.println(http.getString());
+  
+  // Disconnect
+  http.end();
 
   delay(1000);  
 }
@@ -479,14 +498,14 @@ void setup() {
   camera_setup();
   delay(1000);
   TIME_setup();
-  delay(1000);           
+  delay(1000);    
 
   // setup 완료시 ble notify TRUE로 변경
   pTxCharacteristic->setValue("setup completed");
   pTxCharacteristic->notify();
 }
 
-// *************** loop *************** 
+// *************** loop ***************
 void loop() {
   socketIO.loop();
   delay(1000);
@@ -494,4 +513,4 @@ void loop() {
   delay(1000);
   update_hour();
   delay(1000);
-}
+} 
