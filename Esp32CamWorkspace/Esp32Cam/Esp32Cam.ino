@@ -29,9 +29,8 @@ SoftwareSerial Serial_soft(RX, TX);
 
 int now_hour = -1;
 
-String UID = "", bluetooth_data="", MAXHum = "12", MINHum = "11", 
-          MAXTem = "12", MINTem = "11", NOWHUM = "12.0", NOWTem = "33.3",
-          wifi_id = "dlink1234", wifi_pw = "14159265";
+String UID = "", bluetooth_data="", MAXHum = "12", MINHum = "11", MAXTem = "36.5", MINTem = "30.1", 
+        NOWHUM = "12.0", NOWTem = "33.3", wifi_id = "dlink1234", wifi_pw = "14159265";
 
 SocketIOclient socketIO;
 
@@ -255,11 +254,11 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
           //보낸 메시지를 시리얼 모니터에 출력하여 확인한다.
           Serial.println(output);
         }
-        else if (msg.indexOf("camera") != -1)
+        if (msg.indexOf("camera") != -1)
         {
           grab_send_img();
         }
-        else if (msg.indexOf("change-temp"))
+        if (msg.indexOf("change-temp") != -1)
         {
           JsonDocument temp;
           deserializeJson(temp, payload);
@@ -267,10 +266,10 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
           float maxTemp = temp["maxTemp"];
 
           MINTem = String(minTemp, 1);
-          MAXTem = String(maxTemp, 1);      
+          MAXTem = String(maxTemp, 1);
           send_MAXMINdata();
         }
-        else if (msg.indexOf("change-humiddity") != -1)
+        if (msg.indexOf("change-humiddity") != -1)
         {
           JsonDocument humidity;
           deserializeJson(humidity, payload);
@@ -281,7 +280,7 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
           MAXHum = String(maxhumidity, 1);
           send_MAXMINdata();            
         }
-        else if (msg.indexOf("request-temp-humidity") != -1)
+        if (msg.indexOf("request-temp-humidity") != -1)
         {
           DynamicJsonDocument doc(1024);
           JsonArray array = doc.to<JsonArray>();
@@ -290,10 +289,8 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
 
           JsonObject param1 = array.createNestedObject();
           param1["temperature"] = NOWTem.toFloat();
-          JsonObject param2 = array.createNestedObject();
-          param2["humidity"] = NOWHUM.toFloat();
-          JsonObject param3 = array.createNestedObject();
-          param3["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
+          param1["humidity"] = NOWHUM.toFloat();
+          param1["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
 
           String output;
           serializeJson(doc, output);
@@ -302,6 +299,43 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
 
           Serial.println(output);
         }
+        if (msg.indexOf("request-target-temp") != -1)
+        {
+          DynamicJsonDocument doc(1024);
+          JsonArray array = doc.to<JsonArray>();
+
+          array.add("response-target-temp");
+
+          JsonObject param1 = array.createNestedObject();
+          param1["minTemp"] = MINTem.toFloat();
+          param1["maxTemp"] = MAXTem.toFloat();
+          param1["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
+          String output;
+          serializeJson(doc, output);
+
+          socketIO.sendEVENT(output);
+
+          Serial.println(output);
+        } 
+        if (msg.indexOf("request-target-humidity") != -1)
+        {
+          DynamicJsonDocument doc(1024);
+          JsonArray array = doc.to<JsonArray>();
+
+          array.add("response-target-humidity");
+
+          JsonObject param1 = array.createNestedObject();
+          param1["minHumidity"] = MINHum.toFloat();
+          param1["maxHumidity"] = MAXHum.toFloat();
+          param1["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
+
+          String output;
+          serializeJson(doc, output);
+
+          socketIO.sendEVENT(output);
+
+          Serial.println(output);
+        }               
         break;
       }
     case sIOtype_ACK:
@@ -463,15 +497,10 @@ void setup() {
   Serial_soft.begin(9600);  //소프트웨어 시리얼 통신 속도 설정
 
   BT_setup();
-  delay(1000);
   WIFI_setup();     
-  delay(1000);           
   socketIO_setup();
-  delay(1000);           
   camera_setup();
-  delay(1000);
   TIME_setup();
-  delay(1000);    
 
   // setup 완료시 ble notify TRUE로 변경
   pTxCharacteristic->setValue("setup completed");
