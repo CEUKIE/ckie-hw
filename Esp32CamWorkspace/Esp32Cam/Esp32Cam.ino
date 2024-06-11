@@ -16,9 +16,8 @@
 #include <WebSocketsClient.h>
 #include <SocketIOclient.h>
 #include "camera_pins.h"
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
 #include "esp_camera.h"
+#include <base64.h>
 
 #define RX 47
 #define TX 21
@@ -402,10 +401,7 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
 // *************** send MAX MIN data *************** 
 
 void send_MAXMINdata() {
-  while (MAXTem == "" || MINTem == "" || MAXHum == "" || MINHum == "")
-  {
-    Serial_soft.print("data" +MAXTem + " " + MINTem + " " + MAXHum + " " + MINHum + " " + MINHum + ";");
-  }
+  Serial_soft.print("data" +MAXTem + " " + MINTem + " " + MAXHum + " " + MINHum + " " + ";");
 }
 
 // ************** get now data *************** 
@@ -445,7 +441,6 @@ void send_now_data() {
   WiFiClient client;
 
   Serial.println("http POST start" + json);
-  // client->setCACert(rootCACertificate);
 
   HTTPClient http;
   http.begin(client, "http://3.36.227.176:8080/cage-states");
@@ -463,8 +458,6 @@ void send_now_data() {
 
 void camera_setup() {
   Serial.println("[SETUP] CAMERA: SETUP START");
-  
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -486,55 +479,119 @@ void camera_setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_HVGA;
+  config.frame_size = FRAMESIZE_UXGA;
   config.pixel_format = PIXFORMAT_JPEG; // for streaming
-  //config.pixel_format = PIXFORMAT_RGB565; // for face detection/recognition
   config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = CAMERA_FB_IN_PSRAM;
   config.jpeg_quality = 12;
   config.fb_count = 1;
-
+  
+  // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
+  // for larger pre-allocated frame buffer.
   if(psramFound()){
-      config.jpeg_quality = 10;
-      config.fb_count = 2;
-      config.grab_mode = CAMERA_GRAB_LATEST;
+    config.jpeg_quality = 10;
+    config.fb_count = 2;
+    config.grab_mode = CAMERA_GRAB_LATEST;
   } else {
-      // Limit the frame size when PSRAM is not available
-      config.frame_size = FRAMESIZE_SVGA;
-      config.fb_location = CAMERA_FB_IN_DRAM;
+    // Limit the frame size when PSRAM is not available
+    config.frame_size = FRAMESIZE_SVGA;
+    config.fb_location = CAMERA_FB_IN_DRAM;
   }
 
-  while (esp_camera_init(&config) != ESP_OK) {
-      Serial.println("[ERROR] CAMERA: SETUP FAIL");
-      delay(500);
+  // camera init
+  esp_err_t err = esp_camera_init(&config);
+  if (err != ESP_OK) {
+    Serial.printf("Camera init failed with error 0x%x", err);
+    return;
   }
+
   Serial.println("[SETUP] CAMERA: SETUP SUCCESS");
 }
 
 void grab_send_img() {
   camera_fb_t *fb = esp_camera_fb_get();
   if (fb != NULL && fb->format == PIXFORMAT_JPEG) {
-    String img = "";
-    for (size_t i = 0; i < fb->len; i++)
+    // String image = "";
+    // for (size_t i = 0; i < fb->len; i++)
+    // {
+    //   image += char(fb->buf[i]);
+    // }
+
+    Serial.println("http POST start");
+    String boundary = "------c8487f39-b222-477a-955c-60e15be3ea6d";
+    String contentType = "multipart/form-data; boundary=" + boundary;
+
+// WiFiClient를 사용하여 직접 HTTP 요청 작성 및 전송
+    WiFiClient client;
+    if (!client.connect("3.36.227.176", 8080)) {
+      Serial.println("Connection to server failed");
+      esp_camera_fb_return(fb);
+      return;
+    }
+
+    String bodyStart = "--" + boundary + "\r\n" +
+                       "Content-Disposition: form-data; name=\"image\"; filename=\"image.jpg\"\r\n" +
+                       "Content-Type: image/jpeg\r\n\r\n";
+    String bodyEnd = "\r\n--" + boundary + "--\r\n";
+
+    int contentLength = bodyStart.length() + fb->len + bodyEnd.length();
+
+    // HTTP 요청 헤더 작성
+    client.print(String("POST ") + "/files/upload" + " HTTP/1.1\r\n");
+    client.print("Host: 3.36.227.176:8080\r\n");
+    client.print("Content-Type: " + contentType + "\r\n");
+    client.print("Content-Length: " + String(contentLength) + "\r\n");
+    client.print("Connection: close\r\n\r\n");
+
+    // HTTP 요청 바디 작성
+    client.print(bodyStart);
+    client.write(fb->buf, fb->len);
+    client.print(bodyEnd);
+
+    // 서버 응답 읽기
+    while (client.connected()) {
+      String line = client.readStringUntil('\n');
+      if (line == "\r") {
+        break;
+      }
+    }
+
+    String response = client.readString();
+    Serial.println(response);
+
+    if (response.indexOf("\"statusCode\":200") != -1)
     {
-      img += char(fb->buf[i]);
+      int start = response.indexOf("Path\":\"") + 7;
+      int end = response.indexOf('\"', start);
+      String url = response.substring(start, end);
+      DynamicJsonDocument doc(1024);
+      JsonArray array = doc.to<JsonArray>();
+
+      array.add("response-photo");
+
+      JsonObject param1 = array.createNestedObject();
+      param1["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
+      param1["url"] = url;
+
+      String output;
+      serializeJson(doc, output);
+
+      socketIO.sendEVENT(output);
+
+      Serial.println(output);
+    }
+    else {
+      Serial.println("사진이 보내지지 않았습니다!!!");
     }
     
-    DynamicJsonDocument doc(1024);
-    JsonArray array = doc.to<JsonArray>();
-    //array.add("event-name")
-    array.add("send-img");
-    //add payload
-    JsonObject param1 = array.createNestedObject();
-    param1["img"] = img;
-    String output;
-    serializeJson(doc, output);
 
-    // Send evnet
-    socketIO.sendEVENT(output);
-
-    // Print Json for debugging
-    Serial.println(output);
+    client.stop();
+    esp_camera_fb_return(fb); // 카메라 프레임 버퍼 반환
+  } else {
+    Serial.println("Camera capture failed");
+    if (fb != NULL) {
+      esp_camera_fb_return(fb);
+    }
   }
 }
 
@@ -554,6 +611,7 @@ void setup() {
   socketIO_setup();
   camera_setup();
   TIME_setup();
+  send_MAXMINdata();
 
   // setup 완료시 ble notify TRUE로 변경
   pTxCharacteristic->setValue("setup completed");
