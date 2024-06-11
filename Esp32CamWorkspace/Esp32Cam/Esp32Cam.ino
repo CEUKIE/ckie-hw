@@ -34,11 +34,10 @@ SoftwareSerial Serial_soft(RX, TX);
 int now_hour = -1;
 
 String UID = "", bluetooth_data="", MAXHum = "60", MINHum = "70", MAXTem = "25", MINTem = "28", 
-        NOWHUM = "12.0", NOWTem = "33.3", wifi_id = "dlink1234", wifi_pw = "14159265";
+        NOWHUM = "12.0", NOWTem = "33.3", wifi_id = "OwO의 iPhone", wifi_pw = "123456789";
 
 SocketIOclient socketIO;
 
-bool esp32_setup = false;
 
 // *************** bluetooth *************** 
 
@@ -430,6 +429,7 @@ void get_now_data() {
 // *************** send now data *************** 
 
 void send_now_data() {
+  
   // http POST request
   // Prepare JSON document
   DynamicJsonDocument doc(4096);
@@ -485,7 +485,7 @@ void camera_setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_UXGA;
+  config.frame_size = FRAMESIZE_SVGA;
   config.pixel_format = PIXFORMAT_JPEG; // for streaming
   config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = CAMERA_FB_IN_PSRAM;
@@ -515,6 +515,7 @@ void camera_setup() {
 }
 
 void grab_send_img() {
+
   camera_fb_t *fb = esp_camera_fb_get();
   if (fb != NULL && fb->format == PIXFORMAT_JPEG) {
     // String image = "";
@@ -586,18 +587,22 @@ void grab_send_img() {
 
       Serial.println(output);
     }
-    else {
+    else 
+    {
       Serial.println("사진이 보내지지 않았습니다!!!");
     }
+
+
+    
     
 
     client.stop();
     esp_camera_fb_return(fb); // 카메라 프레임 버퍼 반환
-  } else {
-    Serial.println("Camera capture failed");
-    if (fb != NULL) {
-      esp_camera_fb_return(fb);
-    }
+    else {
+      Serial.println("Camera capture failed");
+      if (fb != NULL) {
+        esp_camera_fb_return(fb);
+      }
   }
 }
 
