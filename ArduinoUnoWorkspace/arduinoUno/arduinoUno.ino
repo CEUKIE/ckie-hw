@@ -1,5 +1,5 @@
 /*
-A4 = scl A5 = sdad
+A4 = scl A5 = sda
 */
 #include <DHT.h>
 #include <DHT_U.h>
@@ -31,6 +31,9 @@ int pinMICRO = 5;
 
 //릴레이 모듈
 int pinRelay = 6;
+
+unsigned long int preTime = 0;
+unsigned long int interval = 10000;
 
 //lcd 설정 함수
 void lcd_Setup() {
@@ -100,6 +103,8 @@ void loop() {
   {
     get_maxmindata();
   }
+  unsigned long int currentTime = millis();
+
   
   //현재 온습도 저장
   NOWHum = dht.readHumidity();
@@ -131,9 +136,12 @@ void loop() {
   else{
     digitalWrite(pinRelay, LOW);
   }
+  if (currentTime - preTime > interval) {
+    preTime = currentTime;
+    // 현재 온습도 송신 시리얼 통신 
+    Serial_soft.println(String(NOWTem) + " " + String(NOWHum) + ";");  
+  }
 
-  // 현재 온습도 송신 시리얼 통신 
-  Serial_soft.println(String(NOWTem) + " " + String(NOWHum) + ";");
 }
 
 

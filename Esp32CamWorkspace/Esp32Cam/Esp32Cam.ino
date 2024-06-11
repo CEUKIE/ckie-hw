@@ -25,12 +25,15 @@
 #define CHARACTERISTIC_READ "01e7eeab-2597-4c54-84e8-2fceb73c645d"
 #define CHARACTERISTIC_WRITE "5a9edc71-80cb-4159-b2e6-a2913b761026"
 
+unsigned long int preTime = 0;
+unsigned long int interval = 10000;
+
 
 SoftwareSerial Serial_soft(RX, TX);
 
 int now_hour = -1;
 
-String UID = "", bluetooth_data="", MAXHum = "12", MINHum = "11", MAXTem = "36.5", MINTem = "30.1", 
+String UID = "", bluetooth_data="", MAXHum = "60", MINHum = "70", MAXTem = "25", MINTem = "28", 
         NOWHUM = "12.0", NOWTem = "33.3", wifi_id = "dlink1234", wifi_pw = "14159265";
 
 SocketIOclient socketIO;
@@ -460,6 +463,9 @@ void camera_setup() {
   Serial.println("[SETUP] CAMERA: SETUP START");
 
   camera_config_t config;
+  
+  config.grab_mode = CAMERA_GRAB_LATEST;
+
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM;
@@ -620,7 +626,11 @@ void setup() {
 
 // *************** loop ***************
 void loop() {
+  unsigned long int currentTime = millis();
   socketIO.loop();
-  get_now_data();
+  if (currentTime - preTime > interval) {
+    	preTime = currentTime;
+      get_now_data();
+  }
   update_hour();
 } 
