@@ -65,7 +65,7 @@ void loop() {
     HTTPClient https;
 
     // Send request
-    https.begin(*client, "https://httpbin.org/post");
+    https.begin(*client, "https://api.ckie.store/cage-states");
     https.addHeader("Content-Type", "application/json");
     https.POST(json);
     //

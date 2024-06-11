@@ -1,10 +1,3 @@
-/*
- * WebSocketClientSocketIOack.ino
- *
- *  Created on: 20.07.2019
- *
- */
-
 #include <Arduino.h>
 #include <BluetoothSerial.h>
 #include <BLEDevice.h>
@@ -40,7 +33,7 @@ int now_hour = -1;
 
 String UID = "", bluetooth_data="", MAXHum = "12", MINHum = "11", 
           MAXTem = "12", MINTem = "11", NOWHUM = "12.0", NOWTem = "33.3",
-          wifi_id = "dlink1234", wifi_pw = "14159265";
+          wifi_id = "", wifi_pw = "";
 
 
 
