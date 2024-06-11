@@ -206,26 +206,26 @@ void update_hour() {
 // *************** socket IO *************** 
 
 void socketIO_setup() {
-  socketIO.begin("3.36.227.176", 8080);
+  socketIO.begin("3.36.227.176", 8080, "/socket.io/?EIO=4");
   socketIO.onEvent(socketIOEvent);
 }
 
 void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
   switch(type) {
-    case sIOtype_DISCONNECT:
-      Serial.println("socket disconnected!");
-      socketIO.send(sIOtype_DISCONNECT, "/CKIE Disconnected!");
-      break;
-    case sIOtype_CONNECT:
-      Serial.println("socket connected!");
-      // join default namespace (no auto join in Socket.IO V3)
-      socketIO.send(sIOtype_CONNECT, "/CKIE Connected!");
-      break;
-    case sIOtype_EVENT:
+      case sIOtype_DISCONNECT:
+        Serial.printf("[IOc] Disconnected!\n");
+        break;
+      case sIOtype_CONNECT:
+        Serial.printf("[IOc] Connected to url: %s\n", payload);
+
+        // join default namespace (no auto join in Socket.IO V3)
+        socketIO.send(sIOtype_CONNECT, "/");
+        break;
+      case sIOtype_EVENT:
       {
         Serial.printf("[IOc] get event: %s\n", payload);
         String msg = (char*)payload;
-        if (msg.indexOf("connect-cage") != -1)
+        if (msg.indexOf("connection") != -1)
         {
           // creat JSON message for Socket.IO (event)
           //SocketIO로 보낼 JSON 메시지(=Event) 객체를 생성한다.
@@ -240,7 +240,7 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
           // add payload (parameters) for the event
           //객체에 데이터를 추가한다. 이벤트 처리함수의 매개변수 중 payload에 해당하는 부분이다.
           JsonObject param1 = array.createNestedObject();
-          param1["cageId"] = SERVICE_UUID;
+          param1["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
 
           // JSON to String (serializion)
           //JSON 메시지를 문자열로 직렬화한다.
@@ -293,7 +293,7 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
           JsonObject param2 = array.createNestedObject();
           param2["humidity"] = NOWHUM.toFloat();
           JsonObject param3 = array.createNestedObject();
-          param3["cageId"] = SERVICE_UUID;
+          param3["cageId"] = "c8487f39-b222-477a-955c-60e15be3ea6d";
 
           String output;
           serializeJson(doc, output);
@@ -321,7 +321,6 @@ void send_MAXMINdata() {
   while (MAXTem == "" || MINTem == "" || MAXHum == "" || MINHum == "")
   {
     Serial_soft.print(MAXTem + " " + MINTem + " " + MAXHum + " " + MINHum + " " + MINHum + ";");
-    delay(1000);
   }
 }
 
@@ -374,8 +373,6 @@ void send_now_data() {
   
   // Disconnect
   http.end();
-
-  delay(1000);  
 }
 
 // *************** camera *************** 
@@ -458,7 +455,6 @@ void grab_send_img() {
 
 void restart_esp32 () {
   ESP.restart();
-  delay(1000);
 }
 
 // *************** setup *************** 
@@ -485,9 +481,6 @@ void setup() {
 // *************** loop ***************
 void loop() {
   socketIO.loop();
-  delay(1000);
   get_now_data();
-  delay(1000);
-  // update_hour();
-  // delay(1000);
+  update_hour();
 } 
