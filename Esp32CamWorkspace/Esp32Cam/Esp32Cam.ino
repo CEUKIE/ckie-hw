@@ -16,6 +16,8 @@
 #include <WebSocketsClient.h>
 #include <SocketIOclient.h>
 #include "camera_pins.h"
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 #include "esp_camera.h"
 
 #define RX 47
@@ -254,30 +256,78 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
           //보낸 메시지를 시리얼 모니터에 출력하여 확인한다.
           Serial.println(output);
         }
-        if (msg.indexOf("camera") != -1)
+        if (msg.indexOf("request-photo") != -1)
         {
           grab_send_img();
         }
         if (msg.indexOf("change-temp") != -1)
         {
-          JsonDocument temp;
-          deserializeJson(temp, payload);
-          float minTemp = temp["minTemp"];
-          float maxTemp = temp["maxTemp"];
+          StaticJsonDocument<200> doc;
+          DeserializationError error = deserializeJson(doc, payload);
 
-          MINTem = String(minTemp, 1);
-          MAXTem = String(maxTemp, 1);
+          if (error)
+          {
+            Serial.print(F("deserializeJson() 실패: "));
+            Serial.println(error.f_str());
+            return;
+          }
+          if (!doc.is<JsonArray>()) {
+            Serial.println(F("JSON 데이터가 배열 형식이 아닙니다."));
+            return;
+          }
+
+          // JSON 배열에서 요소를 가져옵니다.
+          JsonArray arr = doc.as<JsonArray>();
+
+          // 두 번째 요소 (객체)를 확인하고 문자열로 변환합니다.
+          JsonObject obj = arr[1];
+
+          if (obj.containsKey("minTemp") && obj.containsKey("maxTemp")) {
+            const char* minTemp = obj["minTemp"];
+            const char* maxTemp = obj["maxTemp"];
+
+            MINTem = String(minTemp);
+            MAXTem = String(maxTemp);
+   
+          } else {
+            Serial.println("minTemp 또는 maxTemp 키를 찾을 수 없습니다.");
+          }
+
           send_MAXMINdata();
         }
-        if (msg.indexOf("change-humiddity") != -1)
+        if (msg.indexOf("change-humidity") != -1)
         {
-          JsonDocument humidity;
-          deserializeJson(humidity, payload);
-          float minhumidity = humidity["minHumidity"];
-          float maxhumidity = humidity["maxHumidity"];
+          StaticJsonDocument<200> doc;
+          DeserializationError error = deserializeJson(doc, payload);
 
-          MINHum = String(minhumidity, 1);
-          MAXHum = String(maxhumidity, 1);
+          if (error)
+          {
+            Serial.print(F("deserializeJson() 실패: "));
+            Serial.println(error.f_str());
+            return;
+          }
+          if (!doc.is<JsonArray>()) {
+            Serial.println(F("JSON 데이터가 배열 형식이 아닙니다."));
+            return;
+          }
+
+          // JSON 배열에서 요소를 가져옵니다.
+          JsonArray arr = doc.as<JsonArray>();
+
+          // 두 번째 요소 (객체)를 확인하고 문자열로 변환합니다.
+          JsonObject obj = arr[1];
+
+          if (obj.containsKey("minHumidity") && obj.containsKey("maxHumidity")) {
+            const char* minHumi = obj["minHumidity"];
+            const char* maxHumi = obj["maxHumidity"];
+
+            MINHum = String(minHumi);
+            MAXHum = String(maxHumi);
+   
+          } else {
+            Serial.println("minHum 또는 maxHum 키를 찾을 수 없습니다.");
+          }
+
           send_MAXMINdata();            
         }
         if (msg.indexOf("request-temp-humidity") != -1)
@@ -354,7 +404,7 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
 void send_MAXMINdata() {
   while (MAXTem == "" || MINTem == "" || MAXHum == "" || MINHum == "")
   {
-    Serial_soft.print(MAXTem + " " + MINTem + " " + MAXHum + " " + MINHum + " " + MINHum + ";");
+    Serial_soft.print("data" +MAXTem + " " + MINTem + " " + MAXHum + " " + MINHum + " " + MINHum + ";");
   }
 }
 
@@ -413,6 +463,9 @@ void send_now_data() {
 
 void camera_setup() {
   Serial.println("[SETUP] CAMERA: SETUP START");
+  
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
+
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
