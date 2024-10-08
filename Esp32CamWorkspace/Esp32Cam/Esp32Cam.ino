@@ -34,7 +34,7 @@ SoftwareSerial Serial_soft(RX, TX);
 int now_hour = -1;
 
 String UID = "", bluetooth_data="", MAXHum = "60", MINHum = "70", MAXTem = "25", MINTem = "28", 
-        NOWHUM = "12.0", NOWTem = "33.3", wifi_id = "OwO의 iPhone", wifi_pw = "123456789";
+        NOWHUM = "12.0", NOWTem = "33.3", wifi_id = "", wifi_pw = "";
 
 SocketIOclient socketIO;
 
