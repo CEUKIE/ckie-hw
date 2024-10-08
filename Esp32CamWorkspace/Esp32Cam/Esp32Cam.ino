@@ -208,7 +208,7 @@ void update_hour() {
 // *************** socket IO *************** 
 
 void socketIO_setup() {
-  socketIO.begin("3.36.227.176", 8080, "/socket.io/?EIO=4");
+  socketIO.begin("IP", "PORT", "/socket.io/?EIO=4");
   socketIO.onEvent(socketIOEvent);
 }
 
